@@ -17,6 +17,7 @@ import android.app.ActionBar;
 import android.app.FragmentTransaction;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +27,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.app.AlertDialog;
 import android.widget.Toast;
+
 
 
 import java.io.BufferedReader;
@@ -47,7 +49,7 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
     ViewPager Tab;
     TabPagerAdapter TabAdapter;
     ActionBar actionBar;
-
+//    Toolbar toolbar;
 
     // UUIDs for UAT service and associated characteristics.
     public static UUID UART_UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -61,7 +63,7 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
     private EditText input;
     Boolean gattsuccess = false;
     // BTLE state
-    private BluetoothAdapter adapter;
+
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic tx;
     private BluetoothGattCharacteristic rx;
@@ -70,7 +72,7 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
     Button sendbutton;
     CheckBox check_box, check_box2, check_box3, check_box4;
 
-    public AlertDialog.Builder dialogBuilder;
+    AlertDialog.Builder dialogBuilder;
     private ArrayList<BluetoothDevice> devices;
 
     public static List<BluetoothDevice> mDevices = new ArrayList<BluetoothDevice>();
@@ -80,15 +82,21 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
     String[] registerdeviceaddr = {"prea","akaa"}; //new String[10];
     String selected = "none";
     Boolean registration = false;
-
+    BluetoothDevice ble;
+    byte[] bytee;
+    Boolean device = false;
     TextView inputt;
+    BluetoothAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
+        adapter = BluetoothAdapter.getDefaultAdapter();
         setContentView(R.layout.activity_main);
+        if(!adapter.isEnabled()){
+            adapter.enable();
+        }
 
 
         TabAdapter = new TabPagerAdapter(getSupportFragmentManager());
@@ -100,12 +108,16 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
                     public void onPageSelected(int position) {
 
                         actionBar = getActionBar();
+                        actionBar.setDisplayShowTitleEnabled(true);
+
                         actionBar.setSelectedNavigationItem(position);
                     }
          });
         Tab.setAdapter(TabAdapter);
 
         actionBar = getActionBar();
+        actionBar.setDisplayShowTitleEnabled(true);
+
         //Enable Tabs on Action Bar
         actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
@@ -176,7 +188,7 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 //            }
 //
 //        };
-        fragmentTransaction.add(R.id.ios_frag, ios );
+        fragmentTransaction.add(R.id.ios_frag, ios);
         fragmentTransaction.commit();
 //        Ios io = (Ios) fragmentManager.findFragmentById(R.id.ios_frag);
 //        check_box = (CheckBox) findViewById(R.id.checkBox);
@@ -190,6 +202,33 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 //            }
 //        });
 
+//        dialogBuilder = new AlertDialog.Builder(this);
+//        dialogBuilder.setTitle("test");
+//        AlertDialog dialogregister = dialogBuilder.create();
+//        dialogregister.show();
+
+//        Thread timerThread = new Thread();
+//        try {
+//            timerThread.sleep(2000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+
+//        if(!device){
+//            dialogBuilder = new AlertDialog.Builder(this);
+//            dialogBuilder.setMessage("Bluetooth Low Energy device not found");
+//            dialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                @Override
+//                public void onClick(DialogInterface dialog, int which) {
+//                    Toast toast = Toast.makeText(MainActivity.this, "Closing the app..", Toast.LENGTH_SHORT);
+//                    toast.show();
+//                    finish();
+//                    moveTaskToBack(true);
+//                }
+//            });
+//            AlertDialog dialogregister = dialogBuilder.create();
+//            dialogregister.show();
+//        }
     }
 
 
@@ -270,10 +309,10 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 //            writeLine("Found device: " + bluetoothDevice.getAddress());
             //Store new ble device id in founddevice
             adapter.stopLeScan(scanCallback);
-            System.out.println("scancallback");
+            System.out.println("in scancallback");
             founddevice = bluetoothDevice.getAddress();
             ssid = bluetoothDevice.getName();
-
+            device = true;
             //Check if (1st time user or not) the mobile already is registered with a ble device id
             //      else create a new file and store the founddevice id.(for a 1st time user)
             String Settingg = "Settin.txt";
@@ -295,31 +334,37 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 //                    e.printStackTrace();
 //                }
             }
-            while(!registration){
-
-            }
+//           while(!registration) {
+//                Toast toast = Toast.makeText(MainActivity.this, devicename, Toast.LENGTH_SHORT);
+//                toast.show();
+//            }
+            bytee = bytes;
+            ble = bluetoothDevice;
             //Readfile from the app internal storage
-            try {
-                readfile();
-            } catch (IOException e) {
-                System.err.println("Caught IOException in readfile: " + e.getMessage());
-                //e.printStackTrace();
-            }
-            //Check if new found ble device id is equal to stored ble device id
-            if (founddevice.equals(storeddevice)) {
-                writeLine("found device = stored device");
-                // Check if the device has the UART service.
-                if (parseUUIDs(bytes).contains(UART_UUID)) {
-                    // Found a device, stop the scan.
-                    adapter.stopLeScan(scanCallback);
-                    writeLine("Found UART service!");
-                    // Connect to the device.
-                    // Control flow will now go to the callback functions when BTLE events occur.
-//                    gatt = bluetoothDevice.connectGatt(getApplicationContext(), false, callback);
-                    gatt = bluetoothDevice.connectGatt(getApplicationContext(), false, callback);
+            if (registration) {
+                try {
+                    readfile();
+                } catch (IOException e) {
+                    System.err.println("Caught IOException in readfile: " + e.getMessage());
+                    //e.printStackTrace();
                 }
-            } else {
-                writeLine("this is not your device");
+                //Check if new found ble device id is equal to stored ble device id
+                if (founddevice.equals(storeddevice)) {
+                    writeLine("found device = stored device");
+                    // Check if the device has the UART service.
+                    if (parseUUIDs(bytee).contains(UART_UUID)) {
+                        // Found a device, stop the scan.
+                        adapter.stopLeScan(scanCallback);
+                        writeLine("Found UART service!");
+                        // Connect to the device.
+                        // Control flow will now go to the callback functions when BTLE events occur.
+//                    gatt = bluetoothDevice.connectGatt(getApplicationContext(), false, callback);
+                        gatt = ble.connectGatt(getApplicationContext(), false, callback);
+                    }
+                } else {
+                    writeLine("this is not your device");
+                   devicenotfound();
+                }
             }
         }
     };
@@ -366,12 +411,8 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
     public void register(String ssid,final String founddevice){
         dialogBuilder = new AlertDialog.Builder(this);
         dialogBuilder.setTitle("Found device - "+ssid);
-//        dialogBuilder.setMessage()
         dialogBuilder.setMessage("Device id - " + founddevice +"\n\nDo you want to register it?");
         System.out.println("inside register");
-//        devices = (ArrayList<BluetoothDevice>) MainActivity.mDevices;
-        System.out.println("inside register after devices");
-
 //        for ( BluetoothDevice bluetoothDevice : devices) {
 //                    devicename = bluetoothDevice.getName();
 //                    deviceaddr = bluetoothDevice.getAddress();
@@ -411,10 +452,32 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
             public void onClick(DialogInterface dialog, int which) {
                 Toast toast = Toast.makeText(MainActivity.this, "Registered to the BLE device", Toast.LENGTH_SHORT);
                 toast.show();
+//                registration = true;
                 try {
-
                     System.out.println("passing found device to createfiel-" + founddevice);
                     createfile(founddevice);
+                    try {
+                        readfile();
+                    } catch (IOException e) {
+                        System.err.println("Caught IOException in readfile: " + e.getMessage());
+                        //e.printStackTrace();
+                    }
+                    //Check if new found ble device id is equal to stored ble device id
+                    if (founddevice.equals(storeddevice)) {
+                        writeLine("found device = stored device");
+                        // Check if the device has the UART service.
+                        if (parseUUIDs(bytee).contains(UART_UUID)) {
+                            // Found a device, stop the scan.
+                            adapter.stopLeScan(scanCallback);
+                            writeLine("Found UART service!");
+                            // Connect to the device.
+                            // Control flow will now go to the callback functions when BTLE events occur.
+//                    gatt = bluetoothDevice.connectGatt(getApplicationContext(), false, callback);
+                            gatt = ble.connectGatt(getApplicationContext(), false, callback);
+                        }
+                    } else {
+                        writeLine("this is not your device");
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -435,7 +498,8 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
                 dialogregister.show();
             }
         });
-
+//        AlertDialog dialogregister = dialogBuilder.create();
+//        dialogregister.show();
 
         writeLine("");
 
@@ -451,7 +515,25 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 //        alertDialog.show();
     }
 
-
+public void devicenotfound(){
+    dialogBuilder = new AlertDialog.Builder(MainActivity.this);
+    dialogBuilder.setMessage("Your registered BLE device not found");
+    dialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            Toast toast = Toast.makeText(MainActivity.this, "Closing the app..", Toast.LENGTH_SHORT);
+            toast.show();
+            finish();
+            moveTaskToBack(true);
+        }
+    });
+    runOnUiThread(new Runnable() {
+        public void run() {
+            AlertDialog dialogregister = dialogBuilder.create();
+            dialogregister.show();
+        }
+    });
+}
 
 
     // OnResume, called right before UI is displayed.  Start the BTLE connection.
@@ -463,7 +545,6 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
             // The first one with the UART service will be chosen--see the code in the scanCallback.
             writeLine("Scanning for devices...");
             adapter.startLeScan(scanCallback);
-
 
         }
     }
@@ -610,6 +691,14 @@ public class MainActivity extends FragmentActivity implements Ios.OnCheckBoxClic
 
     @Override
     public void CheckBoxClicked(String checkboxname) {
-        input.setText(checkboxname);
+        if(checkboxname.equals("check_boxLongClick")){
+            input.performClick();
+            input.setText(checkboxname);
+            sendbutton.setText("OK");
+        }
+        else{
+            input.setText(checkboxname);
+        }
+
     }
 }
